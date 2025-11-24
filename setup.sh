@@ -85,6 +85,47 @@ sudo systemctl daemon-reload
 sudo systemctl enable video-client.service
 
 # ------------------------------------------------------------
+# Enable I2C
+# ------------------------------------------------------------
+echo "[6/7] Enabling I2C..."
+
+# Enable I2C in config.txt (check both old and new locations)
+if [ -f /boot/firmware/config.txt ]; then
+    CONFIG_FILE=/boot/firmware/config.txt
+elif [ -f /boot/config.txt ]; then
+    CONFIG_FILE=/boot/config.txt
+else
+    echo "⚠️  Warning: Could not find config.txt"
+    CONFIG_FILE=/boot/config.txt
+fi
+
+# Check if I2C is already enabled, if not add it
+if ! grep -q "^dtparam=i2c_arm=on" "$CONFIG_FILE"; then
+    echo "dtparam=i2c_arm=on" | sudo tee -a "$CONFIG_FILE" >/dev/null
+    echo "✓ I2C enabled in $CONFIG_FILE"
+else
+    echo "✓ I2C already enabled in $CONFIG_FILE"
+fi
+
+# Add pi user to i2c group
+sudo usermod -a -G i2c pi 2>/dev/null || echo "✓ User already in i2c group"
+
+# Load i2c-dev module
+if ! lsmod | grep -q i2c_dev; then
+    sudo modprobe i2c-dev 2>/dev/null || true
+fi
+
+# Ensure i2c-dev loads on boot
+if ! grep -q "^i2c-dev" /etc/modules; then
+    echo "i2c-dev" | sudo tee -a /etc/modules >/dev/null
+    echo "✓ i2c-dev module configured for boot"
+else
+    echo "✓ i2c-dev module already configured"
+fi
+
+echo "✓ I2C setup complete"
+
+# ------------------------------------------------------------
 # Fix: prevent Chromium from asking for keyring
 # ------------------------------------------------------------
 echo "[7/7] Disabling Chromium keyring popup..."
