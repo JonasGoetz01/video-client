@@ -5,12 +5,18 @@ set -e
 # Video Client - One-Line Installer
 # ============================================================
 # Usage:
-#   curl -sSL https://raw.githubusercontent.com/YOUR_USERNAME/video-client/main/install.sh | bash
+#   curl -sSL https://raw.githubusercontent.com/jonasgoetz01/video-client/main/install.sh | bash
+#
+# This script is idempotent and can be run multiple times safely.
 #
 # This script will:
 #   1. Create /opt/video-client directory
 #   2. Download setup.sh and client.py from GitHub
 #   3. Run setup.sh to install dependencies and configure autostart
+#
+# Options:
+#   SKIP_SETUP=1 - Skip running setup.sh (just download files)
+#     Example: curl -sSL <url> | SKIP_SETUP=1 bash
 # ============================================================
 
 GITHUB_USER="jonasgoetz01"          # TODO: Replace with your GitHub username
@@ -43,18 +49,14 @@ fi
 echo "[1/4] Creating installation directory..."
 
 if [ -d "$INSTALL_DIR" ]; then
-    echo "Directory $INSTALL_DIR already exists."
-    read -p "Do you want to continue and overwrite? (y/N): " -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        echo "Installation cancelled."
-        exit 1
-    fi
+    echo "Directory $INSTALL_DIR already exists. Continuing with installation..."
+else
+    sudo mkdir -p "$INSTALL_DIR"
+    echo "✓ Directory created"
 fi
 
-sudo mkdir -p "$INSTALL_DIR"
 sudo chown -R ${TARGET_USER}:${TARGET_USER} "$INSTALL_DIR"
-echo "✓ Directory created and owned by ${TARGET_USER}"
+echo "✓ Directory owned by ${TARGET_USER}"
 
 # ------------------------------------------------------------
 # Download files from GitHub
@@ -108,15 +110,15 @@ echo "  - Create systemd service for autostart"
 echo "  - Reboot the system"
 echo ""
 
-read -p "Continue with setup? (y/N): " -n 1 -r
-echo
-if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-    echo "Setup cancelled. Files are in ${INSTALL_DIR}"
+# Check if SKIP_SETUP environment variable is set
+if [ "${SKIP_SETUP}" = "1" ]; then
+    echo "SKIP_SETUP is set. Files are in ${INSTALL_DIR}"
     echo "You can run the setup manually later:"
     echo "  cd ${INSTALL_DIR} && sudo ./setup.sh"
     exit 0
 fi
 
-# Run the setup script
+# Run the setup script automatically (idempotent)
+echo "Running setup script..."
 sudo bash "${INSTALL_DIR}/setup.sh"
 
